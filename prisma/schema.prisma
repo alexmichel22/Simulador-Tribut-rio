@@ -1,0 +1,82 @@
+// ==============================================
+// SIMULADOR TRIBUTÁRIO — SCHEMA PRISMA
+// ==============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------
+// USUÁRIO (para versão multi-tenant futura)
+// -----------------------------------------------
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  analises  Analise[]
+
+  @@map("users")
+}
+
+// -----------------------------------------------
+// ANÁLISE TRIBUTÁRIA — tabela principal
+// -----------------------------------------------
+model Analise {
+  id        String        @id @default(cuid())
+  userId    String?
+  user      User?         @relation(fields: [userId], references: [id])
+
+  // Dados da empresa (snapshot no momento da análise)
+  empresaSnapshot Json
+
+  // Resultados do motor de regras
+  regimesPossiveis    Json
+  regimesVedados      Json
+  cenariosComparativos Json
+  regimeRecomendado   String
+  justificativaTecnica String @db.Text
+  riscos              Json
+  alertas             Json
+
+  // Parecer IA
+  parecerExecutivo    String? @db.Text
+  analiseTecnica      String? @db.Text
+  conclusao           String? @db.Text
+  parecerStatus       ParecerStatus @default(PENDENTE)
+
+  status    AnaliseStatus @default(CONCLUIDA)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@map("analises")
+}
+
+// -----------------------------------------------
+// ENUMS
+// -----------------------------------------------
+enum UserRole {
+  USER
+  ADMIN
+  CONSULTOR
+}
+
+enum AnaliseStatus {
+  PROCESSANDO
+  CONCLUIDA
+  ERRO
+}
+
+enum ParecerStatus {
+  PENDENTE
+  GERADO
+  ERRO
+}
